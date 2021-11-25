@@ -3,7 +3,7 @@
 	<head>
 		<title>globus - KYC</title>
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, ">
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
 		<style>
 html, body, .animation {
 	margin: 0px;
@@ -17,6 +17,8 @@ html {
 }
 .animation {
 	position: absolute;
+	opacity:0;
+	transition: opacity 2.4s;
 }
 .earth {
 	position: absolute;
@@ -26,17 +28,21 @@ html {
 	height:100vh;
 	isolation: isolate;
 }
-.halo {
+.halo, .edge {
 	width: 100em;
 	height: 100em;
 	position: absolute;
 	margin: -50em;
-	box-shadow: #2172ffe0 -2.2em 0 3.1em -0.5em inset, #001426d9 -2.9em 0 3.8em -0.9em inset, #0084ff30 -59em 0 18em -41em inset;
+	left: 50%;
+	top: 50%;
+	transform: translate(var(--x), var(--y)) rotate(var(--turn));
 	border-radius: 50%;
-	opacity:0;
-	transition: opacity 2.4s;
+	box-shadow: #25547b8c -1.5em 0 6.8em -1.5em inset;
+}
+.halo {
+	font-size: 106%;
+	box-shadow: #2172ffe0 -2.2em 0 3.1em -0.5em inset, #001426d9 -2.9em 0 3.8em -0.9em inset, #0084ff30 -59em 0 18em -41em inset;
 	mix-blend-mode: color-dodge;
-	/* transform: rotate(-50deg); */
 	color: #5291ff9e;
 	filter: drop-shadow(0.4em 0 4.6em) blur(0.25em);
 }
@@ -58,10 +64,11 @@ html {
 	</head>
 	<body id="color">
 		<div class="animation">
+			<div class="edge"></div>
 			<canvas id="earth" class="earth"></canvas>
 			<div class="halo"></div>
 		</div>
 		<script src="three.min.js"></script>
-		<script src="earth.js?v0"></script>
+		<script src="earth.js?v10"></script>
 	</body>
 </html>

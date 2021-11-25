@@ -8,43 +8,51 @@
 // -------
 	Object.assign(Math,THREE.Math);
 	var positions=[], particles, particle, count = 0, dpr, lastW,
-		W=window.innerWidth, H=window.innerHeight, aspect=W / H,
+		W=1, H=1, aspect=1,
 		roAtm=-Math.degToRad(roAtmDeg);
 
 	var mouseX = 0, mouseY = 0, x0, y0;
 	var vec3=(x,y,z)=>new THREE.Vector3(x||0, y||0, z||0), lookAt=vec3(), PI=Math.PI,
-		canvas=document.querySelector(canvas), halo=document.querySelector('.halo'); 
+		canvas=document.querySelector(canvas), container=document.querySelector('.animation'); 
 
 	// THREE.ShaderChunk.fog_vertex='modelViewMatrix * vec4( transformed, 1.0 )';
 	// THREE.ShaderChunk.fog_fragment='modelViewMatrix * vec4( transformed, 1.0 )';
 
 	var renderer = new THREE.WebGLRenderer({alpha:true, antialias:true, canvas: canvas});//
-	renderer.setSize( W, H );
+	var rTarget=new THREE.WebGLRenderTarget(W,H);
 	//alert()
 	//renderer.context.getExtension('OES_standard_derivatives');
-	var scene = new THREE.Scene(), planet = new THREE.Group(),
-		camera = new THREE.PerspectiveCamera( 18, aspect, 1, 10000 );
+	var scene = new THREE.Scene(), scene2 = new THREE.Scene(), planet = new THREE.Group(),
+		camera = new THREE.PerspectiveCamera( 18, aspect, 1, 10000 ),
+		pCamera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 );
 	camera.position.z=posZ;
 	//planet.position.z=-2*R;
 	camera.lookAt(.5*R,0,0);
-	renderer.render(scene, camera);
+	camera.updateMatrixWorld();
+
+	scene2.background=rTarget.texture;
 	
-	(onresize=function(){
-		W=innerWidth; H=innerHeight;
-		renderer.setSize(W, H);
-		renderer.setPixelRatio(window.devicePixelRatio);//( Math.max(/2, 1) );
+	var vVPort=window.visualViewport||{scale: 1};
+	function resize(){
+		rect=canvas.getBoundingClientRect();
+		if (W==rect.width && H==rect.height && dpr==(dpr=devicePixelRatio*vVPort.scale)) return;
+		W=rect.width; H=rect.height;
+		renderer.setDrawingBufferSize(W, H, dpr);
+		rTarget.setSize(W*dpr, H*dpr);
+		//renderer.setPixelRatio(window.devicePixelRatio);//( Math.max(/2, 1) );
 		camera.aspect=W/H;
 		camera.updateProjectionMatrix();
-		canvas.style='';
+		camera.updateMatrixWorld();
+		//canvas.style='';
 		let l=camera.position.length();
-		Object.assign(halo.style, {
-			opacity: 1,
-			left: (1+lookAt.project(camera).x)*50+'%',
-			top: (1-lookAt.project(camera).y)*50+'%',
-			fontSize: vec3(0, l*Math.tan(Math.asin(R/l)), 0).project(camera).y*H*rAtm/100+'px',
-			transform: `rotate(${roAtmDeg}deg)`
-		})
-	})();
+		container.style.cssText+=`
+			opacity: 1;
+			--x: ${lookAt.project(camera).x*W/2}px;
+			--y: ${lookAt.project(camera).y*H/2}px;
+			font-size: ${vec3(0, l*Math.tan(Math.asin(R/l)), 0).project(camera).y*H/100}px;
+			--turn: ${roAtmDeg}deg
+		`
+	};
 	//scene.position
 	var Emap = (new THREE.TextureLoader()).load( T_earth, function(t){
 		var testCanvas=document.createElement('canvas'), tCtx=testCanvas.getContext('2d'), Ew, Eh;
@@ -245,6 +253,7 @@ varying float vSize;\n\
 	var animComplite, animA=[], animT;
 	requestAnimationFrame(function animate() {
 		animA=requestAnimationFrame(animate, canvas);
+		resize();
 		var t=new Date()*1, dt=t-t0;
 		if (!Emap.image || dt<dMin) return;//
 		dt=Math.min(dt, dMax);
@@ -307,6 +316,7 @@ varying float vSize;\n\
 		}
 		if (newP && pUp<2 && Math.random()<.2 && !pAdded++) addPoint();
 		Pgeometry.attributes.flash.needsUpdate=true;
-		renderer.render( scene, camera );
+		renderer.render( scene, camera, rTarget );
+		renderer.render( scene2, pCamera );
 	}, canvas);
 //})()
