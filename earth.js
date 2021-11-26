@@ -19,7 +19,8 @@
 	// THREE.ShaderChunk.fog_fragment='modelViewMatrix * vec4( transformed, 1.0 )';
 
 	var renderer = new THREE.WebGLRenderer({alpha:true, antialias:true, canvas: canvas});//
-	var rTarget=new THREE.WebGLRenderTarget(W,H);
+	var rTargets=[new THREE.WebGLRenderTarget(W,H,{depthBuffer:false, stencilBuffer:false})];
+	rTargets[1]=rTargets[0].clone();
 	//alert()
 	//renderer.context.getExtension('OES_standard_derivatives');
 	var scene = new THREE.Scene(), scene2 = new THREE.Scene(), planet = new THREE.Group(),
@@ -30,15 +31,50 @@
 	camera.lookAt(.5*R,0,0);
 	camera.updateMatrixWorld();
 
-	scene2.background=rTarget.texture;
+	scene2.background=rTargets[0].texture;
 	
+	var bloom=new THREE.Mesh(0, new THREE.RawShaderMaterial({
+		uniforms:{
+			map: {value: rTargets[0].texture}
+		},
+		vertexShader: `
+			precision mediump float;
+			attribute vec3 position;
+			attribute vec2 uv;
+			varying vec2 vUv;
+			void main(){
+				gl_Position =vec4(position, 1.);
+				vUv=uv;
+			}
+		`,
+		fragmentShader: `
+			precision mediump float;
+			uniform sampler2D map;
+			varying vec2 vUv;
+			void main(){
+				gl_FragColor = texture2D(map, vUv);
+				if (gl_FragColor.a<0.0039) discard;
+			}
+		`
+	}))
 	var vVPort=window.visualViewport||{scale: 1};
 	function resize(){
 		rect=canvas.getBoundingClientRect();
 		if (W==rect.width && H==rect.height && dpr==(dpr=devicePixelRatio*vVPort.scale)) return;
 		W=rect.width; H=rect.height;
+		let w=W*dpr, h=H*dpr, j=0;
+		//  geometry=bloom.geometry=new THREE.PlaneBufferGeometry(w+1, h+1, w+1, h+1)
+		// geometry.addAttribute('pos', geometry.attributes.uv.clone());
+		// geometry.attributes.position.array.forEach((a,i)=>{
+		// 	if (i%3==2) return;
+		// 	geometry.attributes.pos.array[j]=a;
+		// 	geometry.attributes.uv.array[j]=a/(i?h:w)/2+.5;
+		// })
+
 		renderer.setDrawingBufferSize(W, H, dpr);
-		rTarget.setSize(W*dpr, H*dpr);
+		rTargets[0].setSize(w, h);
+		rTargets[1].setSize(w, h);
+
 		//renderer.setPixelRatio(window.devicePixelRatio);//( Math.max(/2, 1) );
 		camera.aspect=W/H;
 		camera.updateProjectionMatrix();
@@ -75,7 +111,7 @@
 		//color: color,
 		map: Emap,
 		transparent: true,
-		alphaTest: 0.01,
+		alphaTest: 0.004,
 		size: R*.06,
 		color: new THREE.Color(color).multiplyScalar(.8),
 		blending: 2,
@@ -86,7 +122,7 @@
 			console.log (sh)
 			sh.fragmentShader=sh.fragmentShader.replace('#include <map_particle_fragment>', `
 		    vec2 cxy = 2.0 * gl_PointCoord - 1.0;
-		    float r = dot(cxy, cxy), delta = fwidth(r)*.5;
+		    float r = length(cxy), delta = fwidth(r)*.5;
 		    diffuseColor.a *= 1.-smoothstep(1. - delta, 1.+delta, r);
 			  diffuseColor.a *= smoothstep( ${(R*.3).toFixed(1)},  ${(-R).toFixed(1)}, fogDepth-${(posZ).toFixed(1)} );
 			`);
@@ -122,7 +158,7 @@
 	var Pmaterial = new THREE.PointsMaterial({
 		size: d*1.2,
 		transparent: true,
-		alphaTest: 0.01,
+		alphaTest: 0.004,
 		depthTest: false,
 		blending: 5,
 		//opacity: .85,
@@ -139,15 +175,15 @@ varying float vSize;\n\
 varying float vSize;\n\
 '			+sh.fragmentShader.replace("#include <map_particle_fragment>", `
 	vec2 cxy = 2.0 * gl_PointCoord - 1.0;
-  float r2 = dot(cxy, cxy), delta = fwidth(r2), size=1.-vSize;
+  float r = length(cxy), delta = fwidth(r), size=1.-vSize;
 	size=1.-size*size;
 	#ifdef T_POINT
-	 diffuseColor.a *=1.0 - smoothstep(1. - delta, 1. + delta, r2);
-	 //diffuseColor.a *= (1.+delta -r2)/delta*.5;
+	 diffuseColor.a =1.0 - smoothstep(1. - delta, 1. + delta, r);
+	 //diffuseColor.a = (1.+delta -r)/delta;
 	#else
-	 float r=sqrt(r2);
+	 //float r=sqrt(r2);
 	 diffuseColor.rgb =mix(vec3(1.1), diffuse, min(r*2.3, 1.));
-	 diffuseColor.a=cos(min(r2,1.)*PI)*.5+.5;
+	 diffuseColor.a=cos(min(r*r,1.)*PI)*.5+.5;
 	#endif
  diffuseColor.a *= smoothstep( ${(R*.2).toFixed(1)},  ${(-R*.4).toFixed(1)}, fogDepth-${(posZ).toFixed(1)} )*size;
       `);
@@ -316,7 +352,7 @@ varying float vSize;\n\
 		}
 		if (newP && pUp<2 && Math.random()<.2 && !pAdded++) addPoint();
 		Pgeometry.attributes.flash.needsUpdate=true;
-		renderer.render( scene, camera, rTarget );
-		renderer.render( scene2, pCamera );
+		renderer.render( scene, camera)//, rTargets[0] );
+		//renderer.render( bloom, pCamera );
 	}, canvas);
 //})()
