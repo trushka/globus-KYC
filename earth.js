@@ -12,8 +12,11 @@
 		roAtm=-Math.degToRad(roAtmDeg);
 
 	var mouseX = 0, mouseY = 0, x0, y0;
-	var vec3=(x,y,z)=>new THREE.Vector3(x||0, y||0, z||0), lookAt=vec3(), PI=Math.PI,
-		canvas=document.querySelector(canvas), container=document.querySelector('.animation'); 
+	var vec2=(x,y)=>new THREE.Vector2(x,y),
+	 vec3=(x,y,z)=>new THREE.Vector3(x,y,z),
+	 quat=new THREE.Quaternion(),
+	 lookAt=vec3(), PI=Math.PI, wX=vec3(1,0,0), wY=vec3(0,1,0),
+	 canvas=document.querySelector(canvas), container=document.querySelector('.animation'); 
 
 	// THREE.ShaderChunk.fog_vertex='modelViewMatrix * vec4( transformed, 1.0 )';
 	// THREE.ShaderChunk.fog_fragment='modelViewMatrix * vec4( transformed, 1.0 )';
@@ -30,6 +33,9 @@
 	//planet.position.z=-2*R;
 	camera.lookAt(.5*R,0,0);
 	camera.updateMatrixWorld();
+
+	planet.rotateY(PI/5).rotateZ(obliquity)//.updateMatrixWorld();
+	var pAxis=vec3(0,1,0).applyQuaternion(planet.quaternion);
 
 	scene2.background=rTargets[0].texture;
 	
@@ -281,10 +287,37 @@ varying float vSize;\n\
 		}
 		return true
 	}
-	var iframe=(parent!=this)?parent.document.querySelector('iframe.earth'):0;
+	var iframe=(parent!=window);
 	if (iframe) {
+		parent.document.querySelector('iframe').forEach(fr=>{
+			if (ifr.contentWindow===window) iframe=fr
+		})
 		iframe.style.width='100vw'
 	}
+
+	// interactions
+	var dx = 0, dy = 0, ready, pointers={},
+		raycaster = new THREE.Raycaster(),
+		mouse = new THREE.Vector2();
+	container.addEventListener('pointerdown', e=>{
+		e = e.changedTouches?e.changedTouches[0]:e;
+		pointers[e.pointerId]={
+			x0 : e.clientX,
+			y0 : e.clientY
+		}
+		e.preventDefault();
+	});
+	window.addEventListener('pointermove', e=>{
+		if (!ready || !pointers[e.pointerId]) return;
+		e.preventDefault();
+		let p=pointers[e.pointerId];
+		dx = (5*dx+p.x0-(p.x0 = e.clientX))/6;
+		dy = (5*dy+p.y0-(p.y0 = e.clientY))/6;
+		//console.log(e.type, active.identifier, dx, x0)
+		ready = 0;
+	});
+	window.addEventListener('pointercancel', e=>delete pointers[e.pointerId]);
+	window.addEventListener('pointerup', e=>delete pointers[e.pointerId]);
 
 	var animComplite, animA=[], animT;
 	requestAnimationFrame(function animate() {
@@ -299,10 +332,15 @@ varying float vSize;\n\
 			if (pos.bottom<=0 || pos.top>=parent.innerHeight) return;
 		}
 		planet.position.z-=planet.position.z*.08;
-		var dr=roV1*dt, ro3=dr*4.81, ro4=dr*4.3;
-		ro1+=dr; ro2+=roV2*dt;
-		planet.rotation.set(0,0,0);
-		planet.rotateY(PI/5).rotateZ(obliquity).rotateY(ro1);
+		planet.rotateOnAxis(planet.up, roV1*dt);
+
+		dx*=(1-.0015*dt);
+		dy*=(1-.0015*dt);
+		planet.rotateOnWorldAxis(wX, -dy*.005);
+		planet.rotateOnWorldAxis(wY, -dx*.005);
+		var ax=vec3(0,1,0).applyQuaternion(planet.quaternion);
+		planet.applyQuaternion(quat.clone().setFromUnitVectors(ax, pAxis).slerp(quat, .95));
+
 		var count=0, newTr, newP, pAdded=0, maxDn=Math.random()*.6;
 		pUp=0;
 		if (!points.length) addPoint();
@@ -354,5 +392,6 @@ varying float vSize;\n\
 		Pgeometry.attributes.flash.needsUpdate=true;
 		renderer.render( scene, camera)//, rTargets[0] );
 		//renderer.render( bloom, pCamera );
+		ready=1;
 	}, canvas);
 //})()
