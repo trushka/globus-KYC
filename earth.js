@@ -1,6 +1,6 @@
 //(function(){
 	var AMOUNT=200, d=220, R=160, adjustment=0, adaptive=true, rAtm=1.06, roAtmDeg=-52,//deg
-		obliquity=23/180*3.14, roV1=.00025, roV2=0, ro1=0, ro2=-0.40, posZ=1700,
+		obliquity=23/180*3.14, roV1=.00025, roV2=0.0005, ro1=0, ro2=-0.40, posZ=1700,
 		canvas='#earth', color='#0084ff', fogC='#722779', T_earth='map.png', T_point='circle.svg',
 		T_particle='data:image/gif;base64,R0lGODlhIAAgAIAAAP///wAAACH5BAEAAAEALAAAAAAgACAAQAJKjI8By51vmpyUqoqzi7oz6GVJSC5X6YEoAD1ry60TImtnjddxvh08C6PZgq0QUSiD/YDIX3O5W0qnVNRteoVGeS6nSncsHZWScQEAOw==';
 // IE fix!!
@@ -256,16 +256,17 @@ varying float vSize;\n\
 		tGeometry.addAttribute( 'flash', new THREE.BufferAttribute( tFlashes, 1 ) );
 		transactions[i]=new THREE.Points(tGeometry, Tmaterial);
 		transactions[i].timer=0;
+		transactions[i].n=n;
 		planet.add(transactions[i]);
 	}
 
 	function addPoint(i0, i, c=0){
-		if ((c+=1)>500) return console.log(c);
+		if ((c+=1)>1500) return console.log(c);
 		if (i0) delete flTimer[i0];
 		if (!i) {
 			if (!points[0]) i=0
 			else points.every(function(p, j){return points[i=j+1+'']});
-			if (i==pCount) return false
+			if (i>=pCount && (!i0 || points[i0].isNew)) return false
 		}
 		var fi=Math.random()*1.8, dTest;
 		var point=points0[Math.floor(Math.random()*points0.length)].clone();
@@ -275,13 +276,14 @@ varying float vSize;\n\
 		if (points.some((v, i)=>(v.up>-1 || flashes[i]>.05) && v.distanceTo(point)<R*(v.pInd==i0?.18:.4))) return addPoint(i0, i, c);
 		point.pInd=i;
 		points[i]=point;
+		point.isNew=!i0;
 		point.up=point.new=+!i0;
 		points32[i*3]=point.x;
 		points32[i*3+1]=point.y;
 		points32[i*3+2]=point.z;
 		Pgeometry.attributes.position.needsUpdate=true;
 		if (i0) addTransaction(points[i0], point, i)
-		if (i0 && pUp<4 && Math.random()>.5) {  //fork
+		if (i0 && pUp<4 && Math.random()>.65) {  //fork
 			flTimer[i0]=(Math.random()*300+70);
 			points[i0].up=1
 		}
@@ -300,7 +302,6 @@ varying float vSize;\n\
 		raycaster = new THREE.Raycaster(),
 		mouse = new THREE.Vector2();
 	container.addEventListener('pointerdown', e=>{
-		e = e.changedTouches?e.changedTouches[0]:e;
 		pointers[e.pointerId]={
 			x0 : e.clientX,
 			y0 : e.clientY
@@ -311,8 +312,8 @@ varying float vSize;\n\
 		if (!ready || !pointers[e.pointerId]) return;
 		e.preventDefault();
 		let p=pointers[e.pointerId];
-		dx = (5*dx+p.x0-(p.x0 = e.clientX))/6;
-		dy = (5*dy+p.y0-(p.y0 = e.clientY))/6;
+		dx = Math.lerp(dx, p.x0-(p.x0 = e.clientX), .3);
+		dy = Math.lerp(dy, p.y0-(p.y0 = e.clientY), .3);
 		//console.log(e.type, active.identifier, dx, x0)
 		ready = 0;
 	});
@@ -324,7 +325,7 @@ varying float vSize;\n\
 		animA=requestAnimationFrame(animate, canvas);
 		resize();
 		var t=new Date()*1, dt=t-t0;
-		if (!Emap.image || dt<dMin) return;//
+		if (!Emap.image) return;// || dt<dMin
 		dt=Math.min(dt, dMax);
 		t0=t;
 		if (iframe) {
@@ -332,14 +333,16 @@ varying float vSize;\n\
 			if (pos.bottom<=0 || pos.top>=parent.innerHeight) return;
 		}
 		planet.position.z-=planet.position.z*.08;
-		planet.rotateOnAxis(planet.up, roV1*dt);
+		//pAxis.applyAxisAngle(wY, roV2*dt);
+		planet.rotateOnWorldAxis(pAxis, roV1*dt);
 
-		dx*=(1-.0015*dt);
-		dy*=(1-.0015*dt);
+		var ax=vec3(0,1,0).applyQuaternion(planet.quaternion);
+		dx*=1-.0015*dt;
+		dy*=1-.0015*dt;
 		planet.rotateOnWorldAxis(wX, -dy*.005);
 		planet.rotateOnWorldAxis(wY, -dx*.005);
-		var ax=vec3(0,1,0).applyQuaternion(planet.quaternion);
-		planet.applyQuaternion(quat.clone().setFromUnitVectors(ax, pAxis).slerp(quat, .95));
+		var aCorr=Math.sqrt(1-ax.angleTo(pAxis)/3.15);
+		planet.applyQuaternion(quat.clone().setFromUnitVectors(ax, pAxis).slerp(quat, 1-.0008*dt*aCorr));
 
 		var count=0, newTr, newP, pAdded=0, maxDn=Math.random()*.6;
 		pUp=0;
@@ -349,7 +352,7 @@ varying float vSize;\n\
 			count++;
 			if (p.up>0) {
 				if ((flashes[i]+=(1.005-flashes[i])*.005*dt) > .95 ) {
-					p.up*=-1;
+					p.up=-1;
 				}
 				if (!transactions[i] && ++pUp && flashes[i]>.15) newTr=i+'';
 			}
@@ -361,7 +364,7 @@ varying float vSize;\n\
 			}
 			if (transactions[i]) {
 				var arr=transactions[i].geometry.attributes.flash.array, n=arr.length,
-					t=transactions[i].timer+=dt/700;//, tt=t*t;
+					t=transactions[i].timer+=dt/Math.pow(transactions[i].n, 1/4)*.0056;//, tt=t*t;
 				arr.forEach(function(v,j){
 					var df=j/n-t, dj=n-j;
 					arr[j]=(df<0) ? 1+df : 1-df*df*8
@@ -374,7 +377,7 @@ varying float vSize;\n\
 					if (!p.up) delete points[i]
 				} else {
 					if (t<1 || p.up>0) pUp++;
-					if (t<1.4 && t>.7) newTr=i+'';
+					if (t<1.4 && t>.8) newTr=i+'';
 					transactions[i].geometry.attributes.flash.needsUpdate=true
 				}
 				if (!p.up) flashes[i] =.3+arr[n-1]*.7;
@@ -383,7 +386,7 @@ varying float vSize;\n\
 		if (points.length && !points[points.length-1]) points.length--;
 		if (newTr) {
 			var p=points[newTr];
-			if (!p.startTr && (p.new || pUp<5 && Math.random()>.4) && !pAdded++) {
+			if (!p.startTr && (p.new || pUp<5 && Math.random()>pUp*.1+.1) && !pAdded++) {
 				p.startTr=addPoint(newTr);
 				if (p.startTr && transactions[newTr] && transactions[newTr].timer>1.2) p.up=1;
 			}
