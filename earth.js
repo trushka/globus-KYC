@@ -27,11 +27,12 @@
 	//alert()
 	//renderer.context.getExtension('OES_standard_derivatives');
 	var scene = new THREE.Scene(), scene2 = new THREE.Scene(), planet = new THREE.Group(),
-		camera = new THREE.PerspectiveCamera( 18, aspect, 1, 10000 ),
-		pCamera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 );
+		camera = new THREE.PerspectiveCamera( 18, aspect, 1, 10000 );
+	// 	pCamera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 );
 	camera.position.z=posZ;
+	camera.zoom=1.8;
 	//planet.position.z=-2*R;
-	camera.lookAt(.5*R,0,0);
+	//camera.lookAt(.5*R,0,0);
 	camera.updateMatrixWorld();
 
 	planet.rotateY(PI/5).rotateZ(obliquity)//.updateMatrixWorld();
@@ -63,39 +64,48 @@
 			}
 		`
 	}))
-	var vVPort=window.visualViewport||{scale: 1};
+	var vVPort=window.visualViewport||{scale: 1}, rect0={};
 	function resize(){
-		rect=canvas.getBoundingClientRect();
-		if (W==rect.width && H==rect.height && dpr==(dpr=devicePixelRatio*vVPort.scale)) return;
-		W=rect.width; H=rect.height;
-		let w=W*dpr, h=H*dpr, j=0;
-		//  geometry=bloom.geometry=new THREE.PlaneBufferGeometry(w+1, h+1, w+1, h+1)
-		// geometry.addAttribute('pos', geometry.attributes.uv.clone());
-		// geometry.attributes.position.array.forEach((a,i)=>{
-		// 	if (i%3==2) return;
-		// 	geometry.attributes.pos.array[j]=a;
-		// 	geometry.attributes.uv.array[j]=a/(i?h:w)/2+.5;
-		// })
+		let rect=canvas.getBoundingClientRect();
+		if (W!=rect.width || H!=rect.height || dpr!=(dpr=devicePixelRatio*vVPort.scale)) {
+			W=rect.width; H=rect.height;
+			let w=W*dpr, h=H*dpr, j=0;
+			//  geometry=bloom.geometry=new THREE.PlaneBufferGeometry(w+1, h+1, w+1, h+1)
+			// geometry.addAttribute('pos', geometry.attributes.uv.clone());
+			// geometry.attributes.position.array.forEach((a,i)=>{
+			// 	if (i%3==2) return;
+			// 	geometry.attributes.pos.array[j]=a;
+			// 	geometry.attributes.uv.array[j]=a/(i?h:w)/2+.5;
+			// })
 
-		renderer.setDrawingBufferSize(W, H, dpr);
-		rTargets[0].setSize(w, h);
-		rTargets[1].setSize(w, h);
+			renderer.setDrawingBufferSize(W, H, dpr);
+			rTargets[0].setSize(w, h);
+			rTargets[1].setSize(w, h);
 
-		//renderer.setPixelRatio(window.devicePixelRatio);//( Math.max(/2, 1) );
-		camera.aspect=W/H;
-		camera.updateProjectionMatrix();
-		camera.updateMatrixWorld();
-		//canvas.style='';
-		let l=camera.position.length();
-		container.style.cssText+=`
-			opacity: 1;
-			--x: ${lookAt.project(camera).x*W/2}px;
-			--y: ${lookAt.project(camera).y*H/2}px;
-			font-size: ${vec3(0, l*Math.tan(Math.asin(R/l)), 0).project(camera).y*H/100}px;
-			--turn: ${roAtmDeg}deg
-		`
+			//renderer.setPixelRatio(window.devicePixelRatio);//( Math.max(/2, 1) );
+			camera.aspect=W/H;
+			camera.updateProjectionMatrix();
+		// 	camera.updateMatrixWorld();
+		// 	//canvas.style='';
+			let l=camera.position.length(),
+				r=vec3(0, l*Math.tan(Math.asin(R/l)), 0).project(camera).y*H;
+			container.style.opacity=1;
+			camera.zoom*=W/1.3/r;
+			camera.updateProjectionMatrix();
+			// container.style.cssText+=`
+			// 	opacity: 1;
+			// 	--x: ${lookAt.project(camera).x*W/2}px;
+			// 	--y: ${lookAt.project(camera).y*H/2}px;
+			// 	font-size: ${vec3(0, l*Math.tan(Math.asin(R/l)), 0).project(camera).y*H/100}px;
+			// 	--turn: ${roAtmDeg}deg
+			// `
+		}
+		let {clientWidth:w0, clientHeight:h0}=document.documentElement
+		if (rect.left<0 || rect.top <0 || rect.right>w0 || rect.top>h0) {
+			//render.setScissor
+		}
 	};
-	//scene.position
+
 	var Emap = (new THREE.TextureLoader()).load( T_earth, function(t){
 		var testCanvas=document.createElement('canvas'), tCtx=testCanvas.getContext('2d'), Ew, Eh;
 		var img=t.image;
@@ -111,7 +121,11 @@
 	} );
 
 	//Emap.anisotropy=Math.min(8, renderer.capabilities.getMaxAnisotropy())||1;
-	Ematerial=new THREE.PointsMaterial({
+	var matScale={
+		set value(val) {this.val=val*camera.zoom},
+		get value() {return this.val}
+	}
+	var Ematerial=new THREE.PointsMaterial({
 		//envMapIntensity:4.5,
 		//emissive: color,
 		//color: color,
@@ -126,6 +140,7 @@
 		depthTest: false,
 		onBeforeCompile: sh=>{
 			console.log (sh)
+			sh.uniforms.scale=matScale;
 			sh.fragmentShader=sh.fragmentShader.replace('#include <map_particle_fragment>', `
 		    vec2 cxy = 2.0 * gl_PointCoord - 1.0;
 		    float r = length(cxy), delta = fwidth(r)*.5;
@@ -170,6 +185,7 @@
 		//opacity: .85,
 		color: color,//.multiplyScalar(2),
 		onBeforeCompile: function(sh){
+			sh.uniforms.scale=matScale;
 			sh.vertexShader='\
 attribute float flash;\n\
 varying float vSize;\n\
@@ -231,14 +247,14 @@ varying float vSize;\n\
 	light2.position.set(1.2*R,-1.2*R,-.1*R);
 	hLight.position.set(0,0,1);
 
-	var t0=new Date()*1, dMax=1000/15, dMin=1000/45, dT=1000/61, af, Pactive=[],
+	var t0=performance.now(), dMax=1000/15, dMin=1000/45, dT=1000/61, af, Pactive=[],
 		axis=vec3(0,1,0).applyAxisAngle(vec3(0,0,1), obliquity), points0=[],
 		pUp=0, pDn=[], flTimer=[], vecTest=new THREE.Vector3(), transStart, pLast, transactions=[],
 		Tmaterial=Pmaterial.clone();
 	Tmaterial.__proto__=Pmaterial;
 	Tmaterial.defines={T_POINT: 1};
 	Tmaterial.blending=2;
-	Tmaterial.size=.06*d; Tmaterial.opacity=.75;
+	Tmaterial.size=.047*d; Tmaterial.opacity=.75;
 	Tmaterial.color.multiplyScalar(.8);
 	
 	function addTransaction(a,b,i){
@@ -248,7 +264,7 @@ varying float vSize;\n\
 		var curve = new THREE.CurvePath();
 		curve.add(new THREE.CubicBezierCurve3(a, a.clone().add(cn), center.clone().sub(ab), center));
 		curve.add(new THREE.CubicBezierCurve3(center, center.clone().add(ab), b.clone().add(cn), b));
-		n=curve.getLength()/R*180;
+		n=curve.getLength()/R*200;
 
 		var tFlashes=new Float32Array(n+1);
 		//tFlashes.forEach(function(f,i){if (i) tFlashes[i]=tFlashes[i-1]+1/n});
@@ -283,8 +299,8 @@ varying float vSize;\n\
 		points32[i*3+2]=point.z;
 		Pgeometry.attributes.position.needsUpdate=true;
 		if (i0) addTransaction(points[i0], point, i)
-		if (i0 && pUp<4 && Math.random()>.65) {  //fork
-			flTimer[i0]=(Math.random()*300+70);
+		if (i0 && pUp<6 && Math.random()>.65) {  //fork
+			flTimer[i0]=Math.random()<.5?Math.random()*200+230:Math.random()*100;
 			points[i0].up=1
 		}
 		return true
@@ -324,7 +340,7 @@ varying float vSize;\n\
 	requestAnimationFrame(function animate() {
 		animA=requestAnimationFrame(animate, canvas);
 		resize();
-		var t=new Date()*1, dt=t-t0;
+		var t=performance.now(), dt=t-t0;
 		if (!Emap.image) return;// || dt<dMin
 		dt=Math.min(dt, dMax);
 		t0=t;
@@ -364,10 +380,11 @@ varying float vSize;\n\
 			}
 			if (transactions[i]) {
 				var arr=transactions[i].geometry.attributes.flash.array, n=arr.length,
-					t=transactions[i].timer+=dt/Math.pow(transactions[i].n, 1/4)*.0056;//, tt=t*t;
+					t=transactions[i].timer+=dt/Math.pow(transactions[i].n, .3)*.008;//, tt=t*t;
 				arr.forEach(function(v,j){
 					var df=j/n-t, dj=n-j;
-					arr[j]=(df<0) ? 1+df : 1-df*df*8
+					arr[j]=(df<0) ? 1+df : +(df<.2)*(1-df*df*8);
+
 					if (!(dj%6) && dj<31) arr[j]*=Math.pow(1.14, 6-dj/6)
 				});
 				if ( t>1 && arr[n-1]<-0.4 ) {
@@ -380,13 +397,13 @@ varying float vSize;\n\
 					if (t<1.4 && t>.8) newTr=i+'';
 					transactions[i].geometry.attributes.flash.needsUpdate=true
 				}
-				if (!p.up) flashes[i] =.3+arr[n-1]*.7;
+				if (!p.up) flashes[i] =t>1? .3+arr[n-1]*.7:Math.smoothstep(t, .6, .95);
 			}
 		})
 		if (points.length && !points[points.length-1]) points.length--;
 		if (newTr) {
 			var p=points[newTr];
-			if (!p.startTr && (p.new || pUp<5 && Math.random()>pUp*.1+.1) && !pAdded++) {
+			if (!p.startTr && (p.new || pUp<7 && Math.random()>.4) && !pAdded++) {
 				p.startTr=addPoint(newTr);
 				if (p.startTr && transactions[newTr] && transactions[newTr].timer>1.2) p.up=1;
 			}

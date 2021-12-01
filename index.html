@@ -5,43 +5,44 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
 		<style>
-html, body, .animation {
-	margin: 0px;
-	overflow: hidden;
-	width: 100vw;
-	height:100vh;
-	isolation: isolate;
-}
-html {
+body {
 	background: linear-gradient( 138deg, #222222 0%, #010101 25%, #080808 39%, #0b0b0b 49%, #0f0f0f 51%, #111111 60%, #040404 76%, #080808 88%, #000000 100% );
+	margin: 0px;
+	height: 201vh;	
 }
 .animation {
+	--size: 60vh;
 	position: absolute;
-	opacity:0;
+	top: 25vh;
+	right: 50vw;
+	font-size: calc(var(--size)/100);
+	width: var(--size);
+	height: var(--size);
+	isolation: isolate;
+	/* opacity:0; */
 	transition: opacity 2.4s;
 }
-.earth {
+.animation .earth {
 	position: absolute;
-	top: 0;
-	left:0;
-	width: 100vw;
-	height:100vh;
-	isolation: isolate;
+	top: -15%;
+	left:-15%;
+	width: 130%;
+	height:130%;
 }
 .halo, .edge {
 	width: 100em;
 	height: 100em;
 	position: absolute;
-	margin: -50em;
-	left: 50%;
-	top: 50%;
-	transform: translate(var(--x), var(--y)) rotate(var(--turn));
+	left: 0;
+	top: 0;
+	transform: rotate(-52deg);
 	border-radius: 50%;
 	box-shadow: #1e85db52 -0.8em 0 5.8em -1.5em inset;
 	/* transition-delay: 2s; */
 }
 .halo {
 	font-size: 106%;
+	margin: -3em;
 	box-shadow: #2172ffe0 -2.2em 0 3.1em -0.5em inset, #001426d9 -2.9em 0 3.8em -0.9em inset, #0084ff30 -59em 0 18em -41em inset;
 	mix-blend-mode: color-dodge;
 	color: #5291ff9e;
