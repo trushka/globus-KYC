@@ -1,38 +1,55 @@
+import {Vector2,
+Math as math, 
+Vector3,
+Quaternion,
+WebGLRenderer,
+WebGLRenderTarget,
+Scene,
+Group,
+PerspectiveCamera,
+OrthographicCamera,
+Mesh,
+RawShaderMaterial,
+TextureLoader,
+Color,
+IcosahedronGeometry,
+Points,
+Float32BufferAttribute,
+PointsMaterial,
+BufferGeometry,
+BufferAttribute,
+Fog,
+CurvePath,
+CubicBezierCurve3,
+Raycaster } from "../three_js/src/Three.js"
 //(function(){
+	console.log(Math);
 	var AMOUNT=200, d=220, R=160, adjustment=0, adaptive=true, rAtm=1.06, roAtmDeg=-52,//deg
 		obliquity=23/180*3.14, roV1=.00025, roV2=0.0005, ro1=0, ro2=-0.40, posZ=1700,
-		canvas='#earth', color='#0084ff', fogC='#722779', T_earth='map.png', T_point='circle.svg',
-		T_particle='data:image/gif;base64,R0lGODlhIAAgAIAAAP///wAAACH5BAEAAAEALAAAAAAgACAAQAJKjI8By51vmpyUqoqzi7oz6GVJSC5X6YEoAD1ry60TImtnjddxvh08C6PZgq0QUSiD/YDIX3O5W0qnVNRteoVGeS6nSncsHZWScQEAOw==';
+		canvas='#earth', color='#0084ff', fogC='#722779', T_earth='map.png';
 // IE fix!!
 	if (!Float32Array.prototype.forEach) Float32Array.prototype.__proto__=Array.prototype//, T_point='point.png'
 // -------
-	Object.assign(Math,THREE.Math);
+	Object.assign(Math, math);
 	var positions=[], particles, particle, count = 0, dpr, lastW,
 		W=1, H=1, aspect=1,
 		roAtm=-Math.degToRad(roAtmDeg);
 
 	var mouseX = 0, mouseY = 0, x0, y0;
-	var vec2=(x,y)=>new THREE.Vector2(x,y),
-	 vec3=(x,y,z)=>new THREE.Vector3(x,y,z),
-	 quat=new THREE.Quaternion(),
+	var vec2=(x,y)=>new Vector2(x,y),
+	 vec3=(x,y,z)=>new Vector3(x,y,z),
+	 quat=new Quaternion(),
 	 lookAt=vec3(), PI=Math.PI, wX=vec3(1,0,0), wY=vec3(0,1,0),
 	 canvas=document.querySelector(canvas), container=document.querySelector('.animation'); 
 
-	// THREE.ShaderChunk.fog_vertex='modelViewMatrix * vec4( transformed, 1.0 )';
-	// THREE.ShaderChunk.fog_fragment='modelViewMatrix * vec4( transformed, 1.0 )';
-
-	var renderer = new THREE.WebGLRenderer({alpha:true, antialias:true, canvas: canvas});//
-	var rTargets=[new THREE.WebGLRenderTarget(W,H,{depthBuffer:false, stencilBuffer:false})];
+	var renderer = new WebGLRenderer({alpha:true, antialias:true, canvas: canvas});//
+	var rTargets=[new WebGLRenderTarget(W,H,{depthBuffer:false, stencilBuffer:false})];
 	rTargets[1]=rTargets[0].clone();
-	//alert()
-	//renderer.context.getExtension('OES_standard_derivatives');
-	var scene = new THREE.Scene(), scene2 = new THREE.Scene(), planet = new THREE.Group(),
-		camera = new THREE.PerspectiveCamera( 18, aspect, 1, 10000 );
-	// 	pCamera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 );
+
+	var scene = new Scene(), scene2 = new Scene(), planet = new Group(),
+		camera = new PerspectiveCamera( 18, aspect, 1, 10000 );
+	// 	pCamera = new OrthographicCamera( - 1, 1, 1, - 1, 0, 1 );
 	camera.position.z=posZ;
-	camera.zoom=1.8;
-	//planet.position.z=-2*R;
-	//camera.lookAt(.5*R,0,0);
 	camera.updateMatrixWorld();
 
 	planet.rotateY(PI/5).rotateZ(obliquity)//.updateMatrixWorld();
@@ -40,7 +57,7 @@
 
 	scene2.background=rTargets[0].texture;
 	
-	var bloom=new THREE.Mesh(0, new THREE.RawShaderMaterial({
+	var bloom=new Mesh(0, new RawShaderMaterial({
 		uniforms:{
 			map: {value: rTargets[0].texture}
 		},
@@ -70,35 +87,18 @@
 		if (W!=rect.width || H!=rect.height || dpr!=(dpr=devicePixelRatio*vVPort.scale)) {
 			W=rect.width; H=rect.height;
 			let w=W*dpr, h=H*dpr, j=0;
-			//  geometry=bloom.geometry=new THREE.PlaneBufferGeometry(w+1, h+1, w+1, h+1)
-			// geometry.addAttribute('pos', geometry.attributes.uv.clone());
-			// geometry.attributes.position.array.forEach((a,i)=>{
-			// 	if (i%3==2) return;
-			// 	geometry.attributes.pos.array[j]=a;
-			// 	geometry.attributes.uv.array[j]=a/(i?h:w)/2+.5;
-			// })
 
 			renderer.setDrawingBufferSize(W, H, dpr);
 			rTargets[0].setSize(w, h);
 			rTargets[1].setSize(w, h);
 
-			//renderer.setPixelRatio(window.devicePixelRatio);//( Math.max(/2, 1) );
 			camera.aspect=W/H;
 			camera.updateProjectionMatrix();
-		// 	camera.updateMatrixWorld();
-		// 	//canvas.style='';
 			let l=camera.position.length(),
 				r=vec3(0, l*Math.tan(Math.asin(R/l)), 0).project(camera).y*H;
 			container.style.opacity=1;
 			camera.zoom*=W/1.3/r;
 			camera.updateProjectionMatrix();
-			// container.style.cssText+=`
-			// 	opacity: 1;
-			// 	--x: ${lookAt.project(camera).x*W/2}px;
-			// 	--y: ${lookAt.project(camera).y*H/2}px;
-			// 	font-size: ${vec3(0, l*Math.tan(Math.asin(R/l)), 0).project(camera).y*H/100}px;
-			// 	--turn: ${roAtmDeg}deg
-			// `
 		}
 		let {clientWidth:w0, clientHeight:h0}=document.documentElement
 		if (rect.left<0 || rect.top <0 || rect.right>w0 || rect.top>h0) {
@@ -106,7 +106,7 @@
 		}
 	};
 
-	var Emap = (new THREE.TextureLoader()).load( T_earth, function(t){
+	var Emap = (new TextureLoader()).load( T_earth, function(t){
 		var testCanvas=document.createElement('canvas'), tCtx=testCanvas.getContext('2d'), Ew, Eh;
 		var img=t.image;
 		Ew=testCanvas.width=img.width; Eh=testCanvas.height=img.height;
@@ -120,23 +120,17 @@
 		})
 	} );
 
-	//Emap.anisotropy=Math.min(8, renderer.capabilities.getMaxAnisotropy())||1;
 	var matScale={
 		set value(val) {this.val=val*camera.zoom},
 		get value() {return this.val}
 	}
-	var Ematerial=new THREE.PointsMaterial({
-		//envMapIntensity:4.5,
-		//emissive: color,
-		//color: color,
+	var Ematerial=new PointsMaterial({
 		map: Emap,
 		transparent: true,
 		alphaTest: 0.004,
 		size: R*.06,
-		color: new THREE.Color(color).multiplyScalar(.8),
+		color: new Color(color).multiplyScalar(.8),
 		blending: 2,
-		// blendSrc: THREE.SrcColorFactor,
-		//blendDst: THREE.SrcColorFactor,
 		depthTest: false,
 		onBeforeCompile: sh=>{
 			console.log (sh)
@@ -158,25 +152,16 @@
 		}
 	});//, opacity: 0
 	Ematerial.extensions = {derivatives: 1};
-	var Egeometry=new THREE.IcosahedronGeometry(R, 6);
-	var Earth = new THREE.Points(new THREE.BufferGeometry().setFromPoints(Egeometry.vertices), Ematerial);
+	var Egeometry=new IcosahedronGeometry(R, 6);
+	var Earth = new Points(new BufferGeometry().setFromPoints(Egeometry.vertices), Ematerial);
 	Egeometry.uv=[];
 	Egeometry.vertices.forEach(v=>{
 		Egeometry.uv.push(.5-Math.atan2(-v.z, -v.x)/2/PI);
 		Egeometry.uv.push(.5+Math.asin(v.y/R)/PI)
 	})
-	Earth.geometry.addAttribute('uv', new THREE.Float32BufferAttribute(Egeometry.uv, 2));
+	Earth.geometry.addAttribute('uv', new Float32BufferAttribute(Egeometry.uv, 2));
 
-	var Sgeometry=new THREE.IcosahedronGeometry(R*1.05, 5),
-		Smaterial=new THREE.MeshPhongMaterial({
-			color: color,
-			transparent: true,
-			onBeforeCompile: sh=>{
-
-			}
-		}), Atmosphere=new THREE.Mesh(Sgeometry, Smaterial);
-	//var wGeometry=geometry.clone();
-	var Pmaterial = new THREE.PointsMaterial({
+	var Pmaterial = new PointsMaterial({
 		size: d*1.2,
 		transparent: true,
 		alphaTest: 0.004,
@@ -216,40 +201,20 @@ varying float vSize;\n\
 
 	var pCount=50, points = []
 	var flashes=new Float32Array(pCount);
-	points32=new Float32Array(pCount*3);
-	Pgeometry=new THREE.BufferGeometry();
-	Pgeometry.addAttribute( 'position', new THREE.BufferAttribute( points32, 3 ) );
-	Pgeometry.addAttribute( 'flash', new THREE.BufferAttribute( flashes, 1 ) );
-	var Points=new THREE.Points(Pgeometry, Pmaterial)
-	
-	var Cpoints=new THREE.ArcCurve(0,0,R*1.2).getSpacedPoints(300),
-		Cgeometry=new THREE.BufferGeometry().setFromPoints( Cpoints ),
-		circle=new THREE.LineSegments( Cgeometry, new THREE.LineBasicMaterial({
-			color: '#99aaff', blending: 2,
-			opacity:.4, transparent: true
-		})),
-		halahup=new THREE.Group().add(circle);
-	halahup.rotation.set(-.43, 0, 0, 'YXZ')
-	circle.translateZ(-.1*R).rotateX(PI/2+.01);
-	(halahup1=halahup.clone()).rotation.set(-.43, 2*PI/3, 0, 'YXZ');
-	(halahup2=halahup.clone()).rotation.set(-.43, -2*PI/3, 0, 'YXZ');
-	
-	planet.add(Points, Earth)//, halahup, halahup1, halahup2);//new THREE.Points(geometry, Pmaterial), , tLine
+	var points32=new Float32Array(pCount*3);
+	var Pgeometry=new BufferGeometry();
+	Pgeometry.addAttribute( 'position', new BufferAttribute( points32, 3 ) );
+	Pgeometry.addAttribute( 'flash', new BufferAttribute( flashes, 1 ) );
+
+	var Flashes=new Points(Pgeometry, Pmaterial);
+	planet.add(Flashes, Earth)
 	scene.add(planet);
 	planet.position.z=-R
 
-	scene.fog=new THREE.Fog(color, posZ-R/2, posZ+R);
-	hLight=new THREE.HemisphereLight('#fff', 0, 20)
-	light1=new THREE.PointLight('#aaf', 13)
-	light2=new THREE.PointLight('#aaf', 1.5)
-	scene.add(hLight, light1, light2);
-	light1.position.set(1.2*R,2.3*R,-.2*R);
-	light2.position.set(1.2*R,-1.2*R,-.1*R);
-	hLight.position.set(0,0,1);
-
+	scene.fog=new Fog(color, posZ-R/2, posZ+R);
 	var t0=performance.now(), dMax=1000/15, dMin=1000/45, dT=1000/61, af, Pactive=[],
 		axis=vec3(0,1,0).applyAxisAngle(vec3(0,0,1), obliquity), points0=[],
-		pUp=0, pDn=[], flTimer=[], vecTest=new THREE.Vector3(), transStart, pLast, transactions=[],
+		pUp=0, pDn=[], flTimer=[], vecTest=new Vector3(), transStart, pLast, transactions=[],
 		Tmaterial=Pmaterial.clone();
 	Tmaterial.__proto__=Pmaterial;
 	Tmaterial.defines={T_POINT: 1};
@@ -261,16 +226,16 @@ varying float vSize;\n\
 		//console.log (pUp, a, b); //return
 		var an=a.angleTo(b), l=R*1.13+an*5.5, center=a.clone().add(b).setLength(l),
 		 ab=b.clone().sub(a).multiplyScalar(.25), cn=center.clone().setLength((l-R)*.7), n;//=an*160+16;
-		var curve = new THREE.CurvePath();
-		curve.add(new THREE.CubicBezierCurve3(a, a.clone().add(cn), center.clone().sub(ab), center));
-		curve.add(new THREE.CubicBezierCurve3(center, center.clone().add(ab), b.clone().add(cn), b));
+		var curve = new CurvePath();
+		curve.add(new CubicBezierCurve3(a, a.clone().add(cn), center.clone().sub(ab), center));
+		curve.add(new CubicBezierCurve3(center, center.clone().add(ab), b.clone().add(cn), b));
 		n=curve.getLength()/R*200;
 
 		var tFlashes=new Float32Array(n+1);
 		//tFlashes.forEach(function(f,i){if (i) tFlashes[i]=tFlashes[i-1]+1/n});
-		tGeometry=new THREE.BufferGeometry().setFromPoints( curve.getSpacedPoints(n) );
-		tGeometry.addAttribute( 'flash', new THREE.BufferAttribute( tFlashes, 1 ) );
-		transactions[i]=new THREE.Points(tGeometry, Tmaterial);
+		var tGeometry=new BufferGeometry().setFromPoints( curve.getSpacedPoints(n) );
+		tGeometry.addAttribute( 'flash', new BufferAttribute( tFlashes, 1 ) );
+		transactions[i]=new Points(tGeometry, Tmaterial);
 		transactions[i].timer=0;
 		transactions[i].n=n;
 		planet.add(transactions[i]);
@@ -305,18 +270,11 @@ varying float vSize;\n\
 		}
 		return true
 	}
-	var iframe=(parent!=window);
-	if (iframe) {
-		parent.document.querySelector('iframe').forEach(fr=>{
-			if (ifr.contentWindow===window) iframe=fr
-		})
-		iframe.style.width='100vw'
-	}
 
 	// interactions
 	var dx = 0, dy = 0, ready, pointers={},
-		raycaster = new THREE.Raycaster(),
-		mouse = new THREE.Vector2();
+		raycaster = new Raycaster();
+
 	container.addEventListener('pointerdown', e=>{
 		pointers[e.pointerId]={
 			x0 : e.clientX,
@@ -332,9 +290,11 @@ varying float vSize;\n\
 		dy = Math.lerp(dy, p.y0-(p.y0 = e.clientY), .3);
 		//console.log(e.type, active.identifier, dx, x0)
 		ready = 0;
+		pointers.touch=(e.pointerType=='touch');
 	});
 	window.addEventListener('pointercancel', e=>delete pointers[e.pointerId]);
 	window.addEventListener('pointerup', e=>delete pointers[e.pointerId]);
+	window.addEventListener('pointerdown', e=>{delete pointers.touch;})
 
 	var animComplite, animA=[], animT;
 	requestAnimationFrame(function animate() {
@@ -344,10 +304,6 @@ varying float vSize;\n\
 		if (!Emap.image) return;// || dt<dMin
 		dt=Math.min(dt, dMax);
 		t0=t;
-		if (iframe) {
-			var pos=iframe.getBoundingClientRect();
-			if (pos.bottom<=0 || pos.top>=parent.innerHeight) return;
-		}
 		planet.position.z-=planet.position.z*.08;
 		//pAxis.applyAxisAngle(wY, roV2*dt);
 		planet.rotateOnWorldAxis(pAxis, roV1*dt);
@@ -355,6 +311,7 @@ varying float vSize;\n\
 		var ax=vec3(0,1,0).applyQuaternion(planet.quaternion);
 		dx*=1-.0015*dt;
 		dy*=1-.0015*dt;
+		if (pointers.touch) document.scrollingElement.scrollTop+=Math.round(dy*.3);
 		planet.rotateOnWorldAxis(wX, -dy*.005);
 		planet.rotateOnWorldAxis(wY, -dx*.005);
 		var aCorr=Math.sqrt(1-ax.angleTo(pAxis)/3.15);

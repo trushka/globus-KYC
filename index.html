@@ -4,8 +4,9 @@
 		<title>globus - KYC</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
-		<script src="three.min.js" defer></script>
-		<script src="earth.js?v14" defer></script>
+<!-- 		<script src="three.min.js" defer></script>
+ -->
+ 		<script src="earth.min.js" type="module"></script>
 		<style>
 body {
 	background: linear-gradient( 138deg, #222222 0%, #010101 25%, #080808 39%, #0b0b0b 49%, #0f0f0f 51%, #111111 60%, #040404 76%, #080808 88%, #000000 100% );
@@ -21,9 +22,9 @@ body {
 	width: var(--size);
 	height: var(--size);
 	isolation: isolate;
-	/* opacity:0; */
+	opacity:0;
 	transition: opacity 2.4s;
-	transition: opacity 2.4s;
+	pointer-events: none;
 }
 .animation .earth {
 	position: absolute;
@@ -31,6 +32,7 @@ body {
 	left:-15%;
 	width: 130%;
 	height:130%;
+	filter: url(#bloom);
 }
 .halo, .edge {
 	width: 100em;
@@ -41,7 +43,7 @@ body {
 	transform: rotate(-52deg);
 	border-radius: 50%;
 	box-shadow: #1e85db52 -0.8em 0 5.8em -1.5em inset;
-	/* transition-delay: 2s; */
+	pointer-events: all;
 }
 .halo {
 	font-size: 106%;
