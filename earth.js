@@ -112,11 +112,13 @@ Raycaster } from "../three_js/src/Three.js"
 		Ew=testCanvas.width=img.width; Eh=testCanvas.height=img.height;
 		tCtx.scale(1, -1);
 		tCtx.drawImage(img,0,-Eh);
-		Egeometry.vertices.forEach(p=>{
+		var idata=tCtx.getImageData(0, 0, Ew, Eh);
+		Egeometry.vertices.forEach((p, i)=>{
 			var u=.5-Math.atan2(-p.z, -p.x)/2/PI,
 				v=.5+Math.asin(p.y/R)/PI,
-				idata=tCtx.getImageData(Math.floor(u%1*Ew), Math.floor(v*Eh), 1, 1);
-			if (!idata.data[0]) points0.push(p);
+				color = idata.data[(Math.floor(u%1*Ew)+Math.floor(v*Eh)*Ew)*4];
+			if (!color) points0.push(p);
+			//if (!(i%1000)) console.log(i);
 		})
 	} );
 
@@ -298,7 +300,7 @@ varying float vSize;\n\
 
 	var animComplite, animA=[], animT;
 	requestAnimationFrame(function animate() {
-		animA=requestAnimationFrame(animate, canvas);
+		requestAnimationFrame(animate);
 		resize();
 		var t=performance.now(), dt=t-t0;
 		if (!Emap.image) return;// || dt<dMin
@@ -370,5 +372,5 @@ varying float vSize;\n\
 		renderer.render( scene, camera)//, rTargets[0] );
 		//renderer.render( bloom, pCamera );
 		ready=1;
-	}, canvas);
+	});
 //})()

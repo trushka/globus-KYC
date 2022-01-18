@@ -6,7 +6,6 @@
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
 <!-- 		<script src="three.min.js" defer></script>
  -->
- 		<script src="earth.min.js" type="module"></script>
 		<style>
 body {
 	background: linear-gradient( 138deg, #222222 0%, #010101 25%, #080808 39%, #0b0b0b 49%, #0f0f0f 51%, #111111 60%, #040404 76%, #080808 88%, #000000 100% );
@@ -32,7 +31,6 @@ body {
 	left:-15%;
 	width: 130%;
 	height:130%;
-	filter: url(#bloom);
 }
 .halo, .edge {
 	width: 100em;
@@ -61,12 +59,9 @@ body {
 	border-radius: 50%;
 	box-shadow: #309bff -1.3em 0 0.9em -0.8em inset;
 	mix-blend-mode: color-dodge;
-	/* filter: blur(1px); */
 }
 .halo::after{
-	/* box-shadow: none; */
 	margin-top: -100%;
-	/* filter: blur(1px); */
 }
 </style>
 	</head>
@@ -76,5 +71,6 @@ body {
 			<canvas id="earth" class="earth"></canvas>
 			<div class="halo"></div>
 		</div>
+ 		<script src="earth.min.js" type="module"></script>
 	</body>
 </html>
