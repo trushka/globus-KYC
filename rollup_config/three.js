@@ -22,4 +22,4 @@ BufferAttribute,
 Fog,
 CurvePath,
 CubicBezierCurve3,
-Raycaster } from "../three_js/src/Three.js"
+Raycaster } from "../../three_js/src/Three.js" //path to three.js source, version 90

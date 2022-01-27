@@ -1,4 +1,4 @@
-import { terser } from '/node_modules/rollup-plugin-terser';
+import { terser } from '/node_modules/rollup-plugin-terser'; // path to terser plagin
 function glsl() {
 
 	const imported=[];
@@ -73,7 +73,7 @@ export default {
 	output: [
 		{
 			format: 'es',
-			file: 'three.min.js',
+			file: '../three.min.js',
 			indent: '\t'
 		}
 	]
