@@ -1,3 +1,8 @@
+
+const d=220, R=160, roAtmDeg=-52, T_earth='map.png',
+		obliquity=23/180*3.14, roV1=.00025, roV2=0.0005, posZ=1700,
+		canvasId='#earth', color='#0084ff', fogC='#722779';
+
 import {Vector2,
 Math as math, 
 Vector3,
@@ -21,15 +26,8 @@ BufferAttribute,
 Fog,
 CurvePath,
 CubicBezierCurve3,
-Raycaster } from "../three_js/src/Three.js"
-//(function(){
-	console.log(Math);
-	var AMOUNT=200, d=220, R=160, adjustment=0, adaptive=true, rAtm=1.06, roAtmDeg=-52,//deg
-		obliquity=23/180*3.14, roV1=.00025, roV2=0.0005, ro1=0, ro2=-0.40, posZ=1700,
-		canvas='#earth', color='#0084ff', fogC='#722779', T_earth='map.png';
-// IE fix!!
-	if (!Float32Array.prototype.forEach) Float32Array.prototype.__proto__=Array.prototype//, T_point='point.png'
-// -------
+Raycaster } from "./three.min.js"
+
 	Object.assign(Math, math);
 	var positions=[], particles, particle, count = 0, dpr, lastW,
 		W=1, H=1, aspect=1,
@@ -40,7 +38,7 @@ Raycaster } from "../three_js/src/Three.js"
 	 vec3=(x,y,z)=>new Vector3(x,y,z),
 	 quat=new Quaternion(),
 	 lookAt=vec3(), PI=Math.PI, wX=vec3(1,0,0), wY=vec3(0,1,0),
-	 canvas=document.querySelector(canvas), container=document.querySelector('.animation'); 
+	 canvas=document.querySelector(canvasId), container=document.querySelector('.animation'); 
 
 	var renderer = new WebGLRenderer({alpha:true, antialias:true, canvas: canvas});//
 	var rTargets=[new WebGLRenderTarget(W,H,{depthBuffer:false, stencilBuffer:false})];

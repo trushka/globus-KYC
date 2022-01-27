@@ -61,19 +61,19 @@ export default {
 		propertyReadSideEffects: false,
 		moduleSideEffects: false
 	},
-	input: 'earth.js',
+	input: 'three.js',
 	plugins: [
 		glsl(),
 		terser({
 			format:{ecma: 2018},
-			compress: {ecma: 2018, drop_console: true}
+			compress: {ecma: 2018, drop_console: true},
 		})
 	],
 	// sourceMap: true,
 	output: [
 		{
 			format: 'es',
-			file: 'earth.min.js',
+			file: 'three.min.js',
 			indent: '\t'
 		}
 	]
